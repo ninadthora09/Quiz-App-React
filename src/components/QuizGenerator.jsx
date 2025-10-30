@@ -6,261 +6,273 @@ import LoadingScreen from "./LoadingScreen";
 import TopicInputScreen from "./TopicInputScreen";
 import QuizContainer from "./QuizContainer";
 import ResultScreen from "./ResultScreen";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "../firebase";
+import Login from "./Login";
+import Logout from "./Logout";
 
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
 // Inspirational quotes for the loading screen
 const quotes = [
-    "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-    "Don’t watch the clock; do what it does. Keep going.",
-    "The secret of getting ahead is getting started.",
-    "Push yourself, because no one else is going to do it for you.",
-    "Small steps every day lead to big results.",
-    "The mind is not a vessel to be filled, but a fire to be kindled.",
-    "Education is the most powerful weapon which you can use to change the world.",
-    "Develop a passion for learning. If you do, you will never cease to grow.",
-    "Learning is not attained by chance, it must be sought for with ardor and attended to with diligence.",
-    "The beautiful thing about learning is that no one can take it away from you."
+  "Success is not final, and failure is not the end — both are merely parts of your journey; what truly defines you is the courage, resilience, and determination to rise and move forward every single time life tests your strength.",
+  "Don’t waste your energy staring at the clock, waiting for the perfect time — instead, keep working relentlessly, because progress is made by those who move steadily, not those who wait for ideal moments.",
+  "The secret of getting ahead in life lies in that very first step you take when no one is watching, that tiny moment of action that turns your dreams into motion and your ideas into achievements.",
+  "Push yourself beyond the limits of comfort, because no one else will fight your battles for you; the drive to succeed must come from the fire that burns within your own soul.",
+  "Small, consistent steps taken with focus and discipline every single day will eventually lead you to extraordinary results that once seemed impossible to reach.",
+  "The mind is not a vessel to be filled with random facts, but a living flame to be kindled with curiosity, imagination, and the constant desire to seek truth and understanding.",
+  "Education is not just about grades or degrees; it is the most powerful weapon that shapes your thinking, transforms your world, and gives you the courage to challenge the impossible.",
+  "Develop a passion for learning so deep that you lose track of time; when knowledge excites your heart, you’ll find yourself growing even when you least expect it.",
+  "Learning does not happen by accident — it requires effort, focus, and an unshakable will to grow, even when the journey feels long and uncertain.",
+  "The most beautiful thing about learning is that it belongs entirely to you — no force, no failure, and no circumstance can ever take away what you have truly understood.",
+  "Every challenge you face in your studies is not a wall, but a doorway; if you push through it with patience and persistence, you’ll find new worlds of wisdom waiting on the other side.",
+  "Don’t compare your progress to anyone else’s; every learner walks a different path, and the speed of your journey matters far less than the direction you choose to take.",
+  "The habits you build today — even the smallest ones — will silently shape the person you become tomorrow, so make every effort count toward your best self.",
+  "A mind that never stops questioning will never stop growing; curiosity is the heartbeat of knowledge, the spark that turns ordinary thinkers into innovators.",
+  "Greatness is not achieved overnight; it is the quiet accumulation of thousands of small efforts that no one sees but that slowly build the foundation of success.",
+  "Failure should never discourage you; it is proof that you are trying, learning, and evolving into someone far more capable than before.",
+  "Discipline will take you further than motivation ever can — because motivation fades, but discipline builds habits that carry you through even your weakest days.",
+  "The more you learn, the more powerful you become — not in controlling others, but in mastering yourself, your choices, and your destiny.",
+  "Knowledge is the light that reveals opportunity in the darkest times; it turns confusion into clarity and uncertainty into purpose.",
+  "Don’t just aim to succeed; aim to grow, to understand, and to leave behind a legacy of wisdom that inspires others long after you’ve moved on."
 ];
 
 const QuizGenerator = () => {
-    // State Management
-    const [topic, setTopic] = useState("");
-    const [difficulty, setDifficulty] = useState("Medium");
-    const [questions, setQuestions] = useState([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [score, setScore] = useState(0);
-    const [showResult, setShowResult] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedAnswers, setSelectedAnswers] = useState([]);
-    const [questionTimes, setQuestionTimes] = useState([]); // Time left for each question
-    const [lockedQuestions, setLockedQuestions] = useState([]); // Whether a question is answered/locked
-    const [isTimerStopped, setIsTimerStopped] = useState(false); // Controls the active question's timer
-    const [quote, setQuote] = useState(""); // For loading screen quotes
-    const [showExplanation, setShowExplanation] = useState(false); // To toggle explanation visibility
-    const [transitionDirection, setTransitionDirection] = useState(1); // For question card animations
+  // Firebase Auth
+  const [user, loadingAuth] = useAuthState(auth);
 
-    // Effect to cycle quotes on the loading screen
-    useEffect(() => {
-        if (!loading) return; // Only run when loading
-        setQuote(quotes[Math.floor(Math.random() * quotes.length)]); // Set initial quote
-        const interval = setInterval(() => {
-            setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-        }, 5000); // Change quote every 5 seconds
-        return () => clearInterval(interval); // Cleanup interval
-    }, [loading]);
+  // State Management
+  const [topic, setTopic] = useState("");
+  const [difficulty, setDifficulty] = useState("Medium");
+  const [questions, setQuestions] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
+  const [questionTimes, setQuestionTimes] = useState([]); // Time left for each question
+  const [lockedQuestions, setLockedQuestions] = useState([]); // Whether a question is answered/locked
+  const [isTimerStopped, setIsTimerStopped] = useState(false); // Controls the active question's timer
+  const [quote, setQuote] = useState(""); // For loading screen quotes
+  const [showExplanation, setShowExplanation] = useState(false); // To toggle explanation visibility
+  const [transitionDirection, setTransitionDirection] = useState(1); // For question card animations
 
-    // Function to start the quiz
-    const startQuiz = async () => {
-        if (!topic.trim()) {
-            setError("Please enter a topic to start the quiz!");
-            return;
-        }
+  // ✅ Always run this effect — not conditionally
+  useEffect(() => {
+    if (!loading) return; // Only run when loading is true
+    setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    const interval = setInterval(() => {
+      setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
-        setLoading(true);
-        setError(null);
-        setScore(0);
-        setCurrentIndex(0);
-        setShowResult(false);
-        setSelectedAnswers([]);
-        setQuestionTimes([]); // Reset times for new quiz
-        setLockedQuestions([]); // Reset lock status
-        setIsTimerStopped(false);
-        setShowExplanation(false);
-        setTransitionDirection(1); // Reset direction for first question
+  // Function to start the quiz
+  const startQuiz = async () => {
+    if (!topic.trim()) {
+      setError("Please enter a topic to start the quiz!");
+      return;
+    }
 
-        try {
-            const data = await fetchQuizQuestions(topic, difficulty); // API call
+    setLoading(true);
+    setError(null);
+    setScore(0);
+    setCurrentIndex(0);
+    setShowResult(false);
+    setSelectedAnswers([]);
+    setQuestionTimes([]); // Reset times for new quiz
+    setLockedQuestions([]); // Reset lock status
+    setIsTimerStopped(false);
+    setShowExplanation(false);
+    setTransitionDirection(1); // Reset direction for first question
 
-            if (!Array.isArray(data) || data.length === 0) {
-                setError("No questions could be generated for that topic. Please try another!");
-                setQuestions([]); // Ensure questions array is empty if no data
-            } else {
-                // Format questions to include 'answer' letter (A, B, C, D)
-                const formatted = data.map((q) => {
-                    const answerIndex = q.options.indexOf(q.correctAnswer);
-                    return { ...q, answer: ["A", "B", "C", "D"][answerIndex] || "A" };
-                });
-                setQuestions(formatted);
-                // Initialize each question with a 60-second timer and unlocked status
-                setQuestionTimes(new Array(formatted.length).fill(60));
-                setLockedQuestions(new Array(formatted.length).fill(false));
-            }
-        } catch (err) {
-            console.error("Failed to fetch questions:", err);
-            setError("Failed to fetch questions. Please check your network or try again.");
-            setQuestions([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      const data = await fetchQuizQuestions(topic, difficulty);
 
-    // Handler for when an option is selected
-    const handleSelect = useCallback((letter) => {
-        // Prevent selecting if already answered or locked
-        if (selectedAnswers[currentIndex] !== undefined || lockedQuestions[currentIndex]) {
-            return;
-        }
-
-        const newSelected = [...selectedAnswers];
-        newSelected[currentIndex] = letter; // Store selected answer
-        setSelectedAnswers(newSelected);
-
-        const newLocked = [...lockedQuestions];
-        newLocked[currentIndex] = true; // Lock the current question
-        setLockedQuestions(newLocked);
-
-        setIsTimerStopped(true); // Stop the timer for the current question
-
-        // Update score if correct
-        if (letter === questions[currentIndex].answer) {
-            setScore((prev) => prev + 1);
-        }
-
-        setShowExplanation(true); // Show explanation after selection
-    }, [currentIndex, selectedAnswers, lockedQuestions, questions]);
-
-    // Handler for when the timer runs out for a question
-    const handleTimeUp = useCallback(() => {
-        // Only lock if not already answered
-        if (!lockedQuestions[currentIndex]) {
-            const newLocked = [...lockedQuestions];
-            newLocked[currentIndex] = true;
-            setLockedQuestions(newLocked);
-
-            // Mark as unanswered if no selection was made
-            const newSelected = [...selectedAnswers];
-            if (!newSelected[currentIndex]) {
-                newSelected[currentIndex] = null; // Use null to indicate unanswered, but locked
-            }
-            setSelectedAnswers(newSelected);
-        }
-
-        setIsTimerStopped(true); // Ensure timer is stopped
-        setShowExplanation(true); // Show explanation automatically
-    }, [currentIndex, lockedQuestions, selectedAnswers]);
-
-    // Callback to update the time left for the current question
-    const handleTick = useCallback(
-        (timeLeft) => {
-            const newTimes = [...questionTimes];
-            newTimes[currentIndex] = timeLeft;
-            setQuestionTimes(newTimes);
-        },
-        [currentIndex, questionTimes]
-    );
-
-    // Function to move to the next question or show results
-    const nextQuestion = () => {
-        setTransitionDirection(1); // Set direction for forward animation
-        if (currentIndex < questions.length - 1) {
-            setCurrentIndex((prev) => prev + 1);
-            setIsTimerStopped(false); // Start timer for the new question
-            setShowExplanation(false); // Hide explanation for the new question
-        } else {
-            setShowResult(true); // All questions answered, show results
-        }
-    };
-
-    // Function to move to the previous question
-    const prevQuestion = () => {
-        if (currentIndex === 0) return; // Cannot go before the first question
-        setTransitionDirection(-1); // Set direction for backward animation
-        setCurrentIndex((prev) => prev - 1);
-        // When going back, we typically want the timer stopped and explanation visible for review
-        setIsTimerStopped(true);
-        setShowExplanation(true);
-    };
-
-    // Function to reset the quiz to its initial state
-    const resetQuiz = () => {
-        setTopic("");
-        setDifficulty("Medium");
+      if (!Array.isArray(data) || data.length === 0) {
+        setError("No questions could be generated for that topic. Please try another!");
         setQuestions([]);
-        setCurrentIndex(0);
-        setScore(0);
-        setShowResult(false);
-        setSelectedAnswers([]);
-        setQuestionTimes([]);
-        setLockedQuestions([]);
-        setIsTimerStopped(false);
-        setError(null);
-        setShowExplanation(false);
-        setTransitionDirection(1); // Reset direction
-    };
+      } else {
+        const formatted = data.map((q) => {
+          const answerIndex = q.options.indexOf(q.correctAnswer);
+          return { ...q, answer: ["A", "B", "C", "D"][answerIndex] || "A" };
+        });
+        setQuestions(formatted);
+        setQuestionTimes(new Array(formatted.length).fill(60));
+        setLockedQuestions(new Array(formatted.length).fill(false));
+      }
+    } catch (err) {
+      console.error("Failed to fetch questions:", err);
+      setError("Failed to fetch questions. Please check your network or try again.");
+      setQuestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="quiz-generator relative w-screen min-h-screen flex flex-col items-center bg-gray-950 font-sans overflow-hidden">
-            {/* Background Layer: Deep Dark + Neon Blobs */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-black to-gray-900 z-0 opacity-90"></div>
-            <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-fuchsia-600 rounded-full mix-blend-lighten filter blur-[200px] opacity-10 animate-blob"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-600 rounded-full mix-blend-lighten filter blur-[200px] opacity-10 animate-blob animation-delay-3000"></div>
+  // Handler when an option is selected
+  const handleSelect = useCallback(
+    (letter) => {
+      if (selectedAnswers[currentIndex] !== undefined || lockedQuestions[currentIndex]) return;
 
-            {/* Navbar */}
-            <Navbar />
+      const newSelected = [...selectedAnswers];
+      newSelected[currentIndex] = letter;
+      setSelectedAnswers(newSelected);
 
-            {/* Main Content Area */}
-            <div className="relative z-10 w-full max-w-7xl px-4 sm:px-8 flex justify-center items-center flex-grow py-10">
-                <AnimatePresence mode="wait" initial={false}>
-                    {/* Loading Screen */}
-                    {loading && (
-                        <LoadingScreen key="loading" quote={quote} />
-                    )}
+      const newLocked = [...lockedQuestions];
+      newLocked[currentIndex] = true;
+      setLockedQuestions(newLocked);
 
-                    {/* Topic Input Screen */}
-                    {!loading && !showResult && questions.length === 0 && (
-                        <TopicInputScreen
-                            key="input"
-                            topic={topic}
-                            setTopic={setTopic}
-                            difficulty={difficulty}
-                            setDifficulty={setDifficulty}
-                            startQuiz={startQuiz}
-                            error={error}
-                        />
-                    )}
+      setIsTimerStopped(true);
 
-                    {/* Quiz Questions Screen */}
-                    {!loading && questions.length > 0 && !showResult && (
-                        <QuizContainer
-                            key={`quiz-${currentIndex}`} // Key change triggers AnimatePresence for QuizCard
-                            question={questions[currentIndex]}
-                            topic={topic}
-                            difficulty={difficulty}
-                            selectedLetter={selectedAnswers[currentIndex] || null}
-                            onSelect={handleSelect}
-                            nextQuestion={nextQuestion}
-                            prevQuestion={prevQuestion}
-                            currentIndex={currentIndex}
-                            totalQuestions={questions.length}
-                            locked={lockedQuestions[currentIndex] || selectedAnswers[currentIndex] !== undefined}
-                            initialTime={questionTimes[currentIndex]}
-                            onTimeUp={handleTimeUp}
-                            isTimerStopped={isTimerStopped || lockedQuestions[currentIndex]}
-                            onTick={handleTick}
-                            showExplanation={showExplanation}
-                            transitionDirection={transitionDirection} // Pass direction for QuizCard animation
-                        />
-                    )}
+      if (letter === questions[currentIndex].answer) {
+        setScore((prev) => prev + 1);
+      }
 
-                    {/* Result Screen */}
-                    {showResult && (
-                        <ResultScreen
-                            key="result"
-                            score={score}
-                            total={questions.length}
-                            topic={topic}
-                            difficulty={difficulty}
-                            resetQuiz={resetQuiz}
-                        />
-                    )}
-                </AnimatePresence>
-            </div>
-            {/* Added a footer/spacer to push content up slightly from bottom if needed */}
-            <div className="h-10 sm:h-20 flex-shrink-0"></div>
-        </div>
-    );
+      setShowExplanation(true);
+    },
+    [currentIndex, selectedAnswers, lockedQuestions, questions]
+  );
+
+  // Handler for when time runs out
+  const handleTimeUp = useCallback(() => {
+    if (!lockedQuestions[currentIndex]) {
+      const newLocked = [...lockedQuestions];
+      newLocked[currentIndex] = true;
+      setLockedQuestions(newLocked);
+
+      const newSelected = [...selectedAnswers];
+      if (!newSelected[currentIndex]) {
+        newSelected[currentIndex] = null;
+      }
+      setSelectedAnswers(newSelected);
+    }
+
+    setIsTimerStopped(true);
+    setShowExplanation(true);
+  }, [currentIndex, lockedQuestions, selectedAnswers]);
+
+  // Update timer for current question
+  const handleTick = useCallback(
+    (timeLeft) => {
+      const newTimes = [...questionTimes];
+      newTimes[currentIndex] = timeLeft;
+      setQuestionTimes(newTimes);
+    },
+    [currentIndex, questionTimes]
+  );
+
+  const nextQuestion = () => {
+    setTransitionDirection(1);
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setIsTimerStopped(false);
+      setShowExplanation(false);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  const prevQuestion = () => {
+    if (currentIndex === 0) return;
+    setTransitionDirection(-1);
+    setCurrentIndex((prev) => prev - 1);
+    setIsTimerStopped(true);
+    setShowExplanation(true);
+  };
+
+  const resetQuiz = () => {
+    setTopic("");
+    setDifficulty("Medium");
+    setQuestions([]);
+    setCurrentIndex(0);
+    setScore(0);
+    setShowResult(false);
+    setSelectedAnswers([]);
+    setQuestionTimes([]);
+    setLockedQuestions([]);
+    setIsTimerStopped(false);
+    setError(null);
+    setShowExplanation(false);
+    setTransitionDirection(1);
+  };
+
+  // ✅ Handle auth loading first
+  if (loadingAuth) {
+    return <LoadingScreen quote="Authenticating user..." />;
+  }
+
+  // ✅ If user is not logged in
+  if (!user) {
+    return <Login/>;
+  }
+
+  return (
+    <div className="quiz-generator relative w-screen min-h-screen flex flex-col items-center bg-gray-950 font-sans overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-black to-gray-900 z-0 opacity-90"></div>
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-fuchsia-600 rounded-full mix-blend-lighten filter blur-[200px] opacity-10 animate-blob"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-600 rounded-full mix-blend-lighten filter blur-[200px] opacity-10 animate-blob animation-delay-3000"></div>
+
+      {/* Navbar */}
+      <Navbar />
+      <Logout />
+
+      {/* Main Area */}
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-8 flex justify-center items-center flex-grow py-10">
+        <AnimatePresence mode="wait" initial={false}>
+          {loading && <LoadingScreen key="loading" quote={quote} />}
+
+          {!loading && !showResult && questions.length === 0 && (
+            <TopicInputScreen
+              key="input"
+              topic={topic}
+              setTopic={setTopic}
+              difficulty={difficulty}
+              setDifficulty={setDifficulty}
+              startQuiz={startQuiz}
+              error={error}
+            />
+          )}
+
+          {!loading && questions.length > 0 && !showResult && (
+            <QuizContainer
+              key={`quiz-${currentIndex}`}
+              question={questions[currentIndex]}
+              topic={topic}
+              difficulty={difficulty}
+              selectedLetter={selectedAnswers[currentIndex] || null}
+              onSelect={handleSelect}
+              nextQuestion={nextQuestion}
+              prevQuestion={prevQuestion}
+              currentIndex={currentIndex}
+              totalQuestions={questions.length}
+              locked={lockedQuestions[currentIndex] || selectedAnswers[currentIndex] !== undefined}
+              initialTime={questionTimes[currentIndex]}
+              onTimeUp={handleTimeUp}
+              isTimerStopped={isTimerStopped || lockedQuestions[currentIndex]}
+              onTick={handleTick}
+              showExplanation={showExplanation}
+              transitionDirection={transitionDirection}
+            />
+          )}
+
+          {showResult && (
+            <ResultScreen
+              key="result"
+              score={score}
+              total={questions.length}
+              topic={topic}
+              difficulty={difficulty}
+              resetQuiz={resetQuiz}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+        <Logout />
+      <div className="h-10 sm:h-20 flex-shrink-0"></div>
+    </div>
+  );
 };
 
 export default QuizGenerator;

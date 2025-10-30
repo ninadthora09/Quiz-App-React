@@ -47,6 +47,7 @@ Constraints:
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
+          model: "gemini-2.5-flash",
           contents: [
             {
               parts: [{ text: prompt }]
@@ -69,6 +70,7 @@ Constraints:
 
     // ✅ Parse JSON safely
     const parsed = JSON.parse(jsonString);
+
 
     // ✅ Add IDs + difficulty
     return parsed.map((q, idx) => ({
